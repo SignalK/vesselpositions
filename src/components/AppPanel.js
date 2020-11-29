@@ -16,7 +16,6 @@ const AppPanel = (props) => {
   const [center, setCenter] = useState([60.1, 25])
   const aisTargetsRef = useRef();
   aisTargetsRef.current = aisTargets
-  const bufferTargets = useRef({})
 
   const mapRef = useRef(null)
 
@@ -70,13 +69,7 @@ const AppPanel = (props) => {
         })
       }
     }
-    const updateTimer = setInterval(() => {
-      setAisTargets((prevTargets) => {
-        const newTargets = bufferTargets.current
-        bufferTargets.current = {}
-        return { ...prevTargets, ...newTargets }
-      })
-    }, 500)
+
     const fetchNames = () => {
       const vesselsWithNoName = Object.entries(aisTargetsRef.current).filter(([id, data]) => !data.hasName)
       const fetchNames = vesselsWithNoName.map(([id]) => props.adminUI.get({ context: id, path: 'name' }).then(r => r.json().then(data => [id, data])))
