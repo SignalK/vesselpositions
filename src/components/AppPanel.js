@@ -10,7 +10,6 @@ const AppPanel = (props) => {
     return <props.adminUI.Login />
   }
 
-
   const [applicationData, setApplicationData] = useState({ markers: [] })
   const [aisTargets, setAisTargets] = useState({})
   const [center, setCenter] = useState([60.1, 25])
