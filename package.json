@@ -26,6 +26,7 @@
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-leaflet": "^2.8.0",
+    "rimraf": "^3.0.2",
     "rxjs": "^6.6.3",
     "style-loader": "^2.0.0",
     "webpack": "^5.0.0",
