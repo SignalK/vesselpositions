@@ -12,6 +12,9 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, 'public')
   },
+  resolve: {
+    extensions: [ '.tsx', '.ts', '.js' ],
+  },
   module: {
     rules: [
       {
@@ -21,6 +24,11 @@ module.exports = {
         options: {
           presets: ['@babel/preset-react'],
         },
+      },
+      {
+        test: /\.tsx?$/,
+        use: 'ts-loader',
+        exclude: /node_modules/,
       },
       {
         test: /\.css$/,
