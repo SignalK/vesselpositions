@@ -5,6 +5,12 @@ import VesselDataBundle from './VesselDataBundle'
 import VesselDataDisplay from './VesselDataDisplay'
 const APPLICATION_DATA_VERSION = '1.0'
 
+const pathValueHandlers = {
+  'navigation.position': (vesselData, position) => vesselData.nextPosition(position),
+  'navigation.speedOverGround': (vesselData, speed) => vesselData.nextSpeed(speed),
+  'navigation.courseOverGroundTrue': (vesselData, course) => vesselData.nextHeading(course)
+}
+
 const AppPanel = (props) => {
   if (props.loginStatus.status === 'notLoggedIn' && props.loginStatus.authenticationRequired) {
     return <props.adminUI.Login />
@@ -39,30 +45,46 @@ const AppPanel = (props) => {
       setCenter([latitude, longitude])
     })
 
+    const fetchTrack = (context) => {
+      const contextParts = context.split('.')
+      if (contextParts[0] !== 'vessels') {
+        return Promise.resolve({})
+      }
+      return fetch(`/signalk/v1/api/vessels/${contextParts[1]}/track`, {
+        credentials: 'include'
+      }).then(r => r.status === 200 ? r.json() : Promise.resolve({}))
+    }
+
     const ws = props.adminUI.openWebsocket({ subscribe: 'none' })
     ws.onopen = () => {
-      ws.send(JSON.stringify({ context: '*', subscribe: [{ path: 'navigation.courseOverGroundTrue' }, { path: 'navigation.position' }] }))
+      ws.send(JSON.stringify({
+        context: '*',
+        subscribe: Object.keys(pathValueHandlers).map(path => ({ path }))
+      }))
     }
     ws.onmessage = (x) => {
       const delta = JSON.parse(x.data)
       if (delta.context) {
         (delta.updates || []).forEach(update => {
           (update.values || []).forEach(pathValue => {
-            if (pathValue.path === 'navigation.position' || pathValue.path === 'navigation.courseOverGroundTrue') {
+            const handler = pathValueHandlers[pathValue.path]
+            if (handler) {
               let vesselData = aisTargetsRef.current[delta.context]
               if (!vesselData) {
                 vesselData = {
                   vesselData: new VesselDataBundle()
                 }
+                fetchTrack(delta.context)
+                  .then(trackGEOJson => {
+                    if (trackGEOJson && trackGEOJson.coordinates && trackGEOJson.coordinates[0]) {
+                      vesselData.vesselData.setRetrievedTrack(trackGEOJson.coordinates[0].map(([lng, lat]) => [lat, lng]))
+                    }
+                  })
                 const newTarget = {}
                 newTarget[delta.context] = vesselData
                 setAisTargets(prevTargets => ({ ...prevTargets, ...newTarget }))
               }
-              if (pathValue.path === 'navigation.courseOverGroundTrue') {
-                vesselData.vesselData.nextHeading(pathValue.value)
-              } else {
-                vesselData.vesselData.nextPosition(pathValue.value)
-              }
+              handler(vesselData.vesselData, pathValue.value)
             }
           })
         })

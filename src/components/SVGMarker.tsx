@@ -51,7 +51,7 @@ interface SVGIconProps {
   name?: string;
 }
 const SVGIcon = (props: SVGIconProps) => (
-  <svg width="100px" height="50px" viewBox="-50 -50 200 100">
+  <svg width="150px" height="50px" viewBox="-50 -50 325 100">
     <g transform={`rotate(${deg(props.course || 0)})`}>
       <circle r="2" stroke="black" />
       <polygon
@@ -62,7 +62,7 @@ const SVGIcon = (props: SVGIconProps) => (
       />
     </g>
     <g>
-      <text x="10">{props.name ? props.name : ""}</text>
+      <text x="10" style={{fontSize: 28}}>{props.name ? props.name : ""}</text>
     </g>
   </svg>
 );
