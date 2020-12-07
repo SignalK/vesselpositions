@@ -1,6 +1,6 @@
-import { LatLngBoundsExpression, LatLngExpression } from "leaflet"
-import { BehaviorSubject, Observable, Subject } from "rxjs"
-import { map, throttleTime, scan, withLatestFrom } from "rxjs/operators"
+import { LatLngExpression } from "leaflet"
+import { BehaviorSubject, EMPTY, Observable, Subject } from "rxjs"
+import { map, throttleTime, scan, withLatestFrom, timeoutWith } from "rxjs/operators"
 
 interface LatLngObject {
   latitude: number,
@@ -9,6 +9,7 @@ interface LatLngObject {
 
 export default class VesselDataBundle {
   positionSubject: Subject<LatLngExpression>
+  positionTimeout: Observable<any>
   retrievedTrack: Subject<LatLngExpression[]>
   accumulatedTrack: Observable<LatLngExpression[]>
   uptodateTrack: Observable<LatLngExpression[]>
@@ -17,7 +18,10 @@ export default class VesselDataBundle {
   nameSubject: Subject<string>
 
   constructor() {
-    this.positionSubject = new Subject()
+    this.positionSubject = new Subject<LatLngExpression>()
+    this.positionTimeout = this.positionSubject.pipe(
+      timeoutWith(5 * 60 * 1000, EMPTY)
+    )
     this.retrievedTrack = new BehaviorSubject([] as LatLngExpression[])
     this.accumulatedTrack = this.positionSubject.pipe(
       throttleTime(5 * 1000),
