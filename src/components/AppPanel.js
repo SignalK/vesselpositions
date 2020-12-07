@@ -74,6 +74,12 @@ const AppPanel = (props) => {
                 vesselData = {
                   vesselData: new VesselDataBundle()
                 }
+                vesselData.vesselData.positionTimeout.subscribe({
+                  complete: () => {
+                    delete aisTargetsRef.current[delta.context]
+                    setAisTargets({ ...aisTargetsRef.current })
+                  }
+                })
                 fetchTrack(delta.context)
                   .then(trackGEOJson => {
                     if (trackGEOJson && trackGEOJson.coordinates && trackGEOJson.coordinates[0]) {
