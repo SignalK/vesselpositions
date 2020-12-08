@@ -1,14 +1,49 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Map, Marker, TileLayer } from 'react-leaflet'
+import Control from 'react-leaflet-control'
 import * as lh from './leaflet-hack'
 import VesselDataBundle from './VesselDataBundle'
 import VesselDataDisplay from './VesselDataDisplay'
+import * as pkg from '../../package.json'
+
+const safePluginId = pkg.name.replace(/[-@/]/g, '_')
 const APPLICATION_DATA_VERSION = '1.0'
 
 const pathValueHandlers = {
   'navigation.position': (vesselData, position) => vesselData.nextPosition(position),
   'navigation.speedOverGround': (vesselData, speed) => vesselData.nextSpeed(speed),
   'navigation.courseOverGroundTrue': (vesselData, course) => vesselData.nextHeading(course)
+}
+
+const saveViewport = (viewport) => {
+  let settings
+  try {
+    settings = JSON.parse(window.localStorage.getItem(safePluginId))
+  } catch (e) {
+    settings = {}
+  }
+  window.localStorage.setItem(safePluginId, JSON.stringify({ ...settings, viewport }))
+}
+
+const setSelfAsCenter = (setCenter) => fetch('/signalk/v1/api/vessels/self/navigation/position/value', {
+  credentials: 'include'
+}).then(r => r.json()).then(pos => {
+  const { latitude, longitude } = pos
+  setCenter([latitude, longitude])
+})
+
+const getInitialViewport = () => {
+  try {
+    const settings = JSON.parse(localStorage.getItem(safePluginId))
+    if (settings.viewport) {
+      return settings.viewport
+    }
+  } catch (e) {
+    return {
+      center: [60.1, 25],
+      zoom: 10
+    }
+  }
 }
 
 const AppPanel = (props) => {
@@ -18,11 +53,12 @@ const AppPanel = (props) => {
 
   const [applicationData, setApplicationData] = useState({ markers: [] })
   const [aisTargets, setAisTargets] = useState({})
-  const [center, setCenter] = useState([60.1, 25])
+  const [viewport, setViewport] = useState(getInitialViewport)
   const aisTargetsRef = useRef();
   aisTargetsRef.current = aisTargets
 
   const mapRef = useRef(null)
+  let lastZoom = 10
 
   useEffect(() => {
     props.adminUI.hideSideBar()
@@ -36,13 +72,6 @@ const AppPanel = (props) => {
 
     props.adminUI.getApplicationUserData(APPLICATION_DATA_VERSION).then(appData => {
       setApplicationData(appData)
-    })
-
-    fetch('/signalk/v1/api/vessels/self/navigation/position/value', {
-      credentials: 'include'
-    }).then(r => r.json()).then(pos => {
-      const { latitude, longitude } = pos
-      setCenter([latitude, longitude])
     })
 
     const fetchTrack = (context) => {
@@ -127,8 +156,8 @@ const AppPanel = (props) => {
     <Map
       ref={mapRef}
       style={{ height: '100%' }}
-      center={center}
-      zoom={10}
+      center={viewport.center}
+      zoom={viewport.zoom}
       onClick={(e) => {
         const markers = [...applicationData.markers || []]
         markers.push(e.latlng)
@@ -138,7 +167,18 @@ const AppPanel = (props) => {
             setApplicationData(appData)
           })
       }}
+      onViewportChanged={viewport => {
+        saveViewport(viewport)
+        lastZoom = viewport.zoom
+      }}
     >
+      <Control position="topleft" >
+      <div class="leaflet-bar">
+        <a class="leaflet-control-zoom-in" role="button" onClick={() => {
+          setSelfAsCenter((center) => setViewport({zoom: lastZoom, center}))
+          }}>•</a>
+      </div>
+      </Control>
       <TileLayer
         attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
