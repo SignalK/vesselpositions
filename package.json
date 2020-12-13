@@ -7,7 +7,9 @@
     "prepublishOnly": "npm run clean && npm run build",
     "dev": "webpack --watch --mode development",
     "build": "webpack --mode=production",
-    "clean": "rimraf ./public"
+    "clean": "rimraf ./public",
+    "create-release": "github-create-release --owner signalk --repository vesselpositions",
+    "release": "git tag -d v$npm_package_version && git tag v$npm_package_version && git push --tags && git push && npm run create-release"
   },
   "keywords": [
     "signalk-embeddable-webapp"
@@ -17,6 +19,7 @@
   "devDependencies": {
     "@babel/core": "^7.11.6",
     "@babel/preset-react": "^7.10.4",
+    "@signalk/github-create-release": "^1.2.0",
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
     "babel-loader": "^8.1.0",
