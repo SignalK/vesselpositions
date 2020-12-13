@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { Map, Marker, TileLayer } from 'react-leaflet'
+import { LayersControl, Map, Marker, TileLayer } from 'react-leaflet'
 import Control from 'react-leaflet-control'
 import * as lh from './leaflet-hack'
 import VesselDataBundle from './VesselDataBundle'
@@ -9,6 +9,22 @@ import { ReplaySubject } from 'rxjs'
 
 const safePluginId = pkg.name.replace(/[-@/]/g, '_')
 const APPLICATION_DATA_VERSION = '1.0'
+
+const BASELAYERS = [
+  {
+    name: 'OpenStreetMap',
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: '&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+  }
+]
+
+const OVERLAYS = [
+  {
+    name: 'OpenSeaMap',
+    url: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+    attribution: ''
+  }
+]
 
 const pathValueHandlers = {
   'navigation.position': (vesselData, position) => vesselData.nextPosition(position),
@@ -47,6 +63,11 @@ const getInitialViewport = () => {
   }
 }
 
+const fetchCharts = () => fetch('/signalk/v1/api/resources/charts', {
+  credentials: 'include'
+}).then(r => r.json())
+
+
 const AppPanel = (props) => {
   if (props.loginStatus.status === 'notLoggedIn' && props.loginStatus.authenticationRequired) {
     return <props.adminUI.Login />
@@ -55,6 +76,7 @@ const AppPanel = (props) => {
   const [applicationData, setApplicationData] = useState({ markers: [] })
   const [aisTargets, setAisTargets] = useState({})
   const [viewport, setViewport] = useState(getInitialViewport)
+  const [charts, setCharts] = useState({ baselayers: BASELAYERS, overlays: OVERLAYS })
   const aisTargetsRef = useRef();
   const selfId = useRef(new ReplaySubject(1));
   aisTargetsRef.current = aisTargets
@@ -86,6 +108,22 @@ const AppPanel = (props) => {
       }).then(r => r.status === 200 ? r.json() : Promise.resolve({}))
     }
 
+    fetchCharts().then(foundCharts => {
+      const baselayers = [...BASELAYERS, ...Object.values(foundCharts).reduce((acc, chart) => {
+        if (chart.tilemapUrl) {
+          const { name, tilemapUrl } = chart
+          acc.push({
+            name,
+            url: tilemapUrl
+          })
+        }
+        return acc
+      }, [])]
+      setCharts({
+        ...charts,
+        baselayers
+      })
+    })
 
     const ws = props.adminUI.openWebsocket({ subscribe: 'none' })
     ws.onopen = () => {
@@ -184,10 +222,21 @@ const AppPanel = (props) => {
           }}>•</a>
       </div>
       </Control>
-      <TileLayer
-        attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />  )
+
+      <LayersControl position="topright">
+        {charts.baselayers.map((layer, i) => (
+          <LayersControl.BaseLayer key={i} checked={i === 0} name={layer.name}>
+            <TileLayer url={layer.url} attribution={layer.attribution} />
+          </LayersControl.BaseLayer>
+        ))}
+        {charts.overlays.map((layer, i) => (
+          <LayersControl.Overlay key={i} name={layer.name}>
+            <TileLayer url={layer.url} attribution={layer.attribution} />
+          </LayersControl.Overlay>
+        ))}
+
+      </LayersControl>
+
       {(applicationData.markers || []).map((latlon, i) => (
         <Marker key={i} position={latlon} onClick={() => {
           const markers = applicationData.markers.slice()
