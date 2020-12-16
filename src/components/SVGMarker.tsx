@@ -54,12 +54,12 @@ const SVGIcon = (props: SVGIconProps) => (
   <svg width="150px" height="50px" viewBox="-50 -50 325 100">
     <g transform={`rotate(${deg(props.course || 0)})`}>
       <circle r="2" stroke="black" />
-      <polygon
+      {props.course !== undefined && (<polygon
         points="0 -25, 10 15, -10 15"
         fill="none"
         strokeWidth="2"
         stroke="black"
-      />
+      />)}
     </g>
     <g>
       <text x="10" style={{fontSize: 28}}>{props.name ? props.name : ""}</text>
