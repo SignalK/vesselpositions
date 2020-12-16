@@ -1,5 +1,5 @@
 import { LatLngExpression } from "leaflet"
-import { BehaviorSubject, EMPTY, Observable, Subject } from "rxjs"
+import { BehaviorSubject, EMPTY, Observable, ReplaySubject, Subject } from "rxjs"
 import { map, throttleTime, scan, withLatestFrom, timeoutWith } from "rxjs/operators"
 
 interface LatLngObject {
@@ -18,7 +18,7 @@ export default class VesselDataBundle {
   nameSubject: Subject<string>
 
   constructor() {
-    this.positionSubject = new Subject<LatLngExpression>()
+    this.positionSubject = new ReplaySubject<LatLngExpression>()
     this.positionTimeout = this.positionSubject.pipe(
       timeoutWith(5 * 60 * 1000, EMPTY)
     )
@@ -38,8 +38,8 @@ export default class VesselDataBundle {
         latestPosition,
       ])
     );
-    this.headingSubject = new BehaviorSubject(0)
-    this.speedSubject = new BehaviorSubject(0)
+    this.headingSubject = new ReplaySubject<number>(1)
+    this.speedSubject = new ReplaySubject<number>(1)
     this.nameSubject = new BehaviorSubject('-')
   }
 
