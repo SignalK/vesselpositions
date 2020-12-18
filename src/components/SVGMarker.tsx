@@ -13,6 +13,7 @@ interface SVGMarkerProps extends MapLayerProps {
   position?: LatLngExpression;
   course?: number;
   name?: string;
+  isSelf?: boolean;
 }
 
 export class SVGMarker extends MapLayer<SVGMarkerProps> {
@@ -41,7 +42,7 @@ const divIcon = (props: SVGIconProps) => {
     className: "custom-icon", //suppress default icon white box
     iconAnchor: [25, 25],
     html: ReactDOMServer.renderToString(
-      <SVGIcon course={props.course} name={props.name} />
+      <SVGIcon course={props.course} name={props.name} isSelf={props.isSelf}/>
     ),
   });
 };
@@ -49,17 +50,18 @@ const divIcon = (props: SVGIconProps) => {
 interface SVGIconProps {
   course?: number;
   name?: string;
+  isSelf?: boolean;
 }
 const SVGIcon = (props: SVGIconProps) => (
   <svg width="150px" height="50px" viewBox="-50 -50 325 100">
     <g transform={`rotate(${deg(props.course || 0)})`}>
-      <circle r="2" stroke="black" />
       {props.course !== undefined && (<polygon
         points="0 -25, 10 15, -10 15"
-        fill="none"
+        fill={props.isSelf ? 'black' : 'gray'}
         strokeWidth="2"
         stroke="black"
       />)}
+      <circle r="2" stroke="black" />
     </g>
     <g>
       <text x="10" style={{fontSize: 28}}>{props.name ? props.name : ""}</text>

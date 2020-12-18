@@ -20,6 +20,7 @@ const VesselDataDisplay = (props: VesselDataDisplayProps) => {
   const speed = useObservableState(vesselData.speedSubject);
   const track = useObservableState(vesselData.uptodateTrack, []);
   const name = useObservableState(vesselData.nameSubject);
+  const isSelf = useObservableState(vesselData.isSelfSubject);
   const projectionMinutes = Array.from(Array(PROJECTINMINUTES), (x, i) => i);
   const minutePositions =
     position && heading !== undefined && speed
@@ -32,6 +33,7 @@ const VesselDataDisplay = (props: VesselDataDisplayProps) => {
           );
         })
       : [];
+  const projectionColor = isSelf ? 'blue' : 'black'
   return (
     <span>
       {position && (
@@ -39,6 +41,7 @@ const VesselDataDisplay = (props: VesselDataDisplayProps) => {
           position={position as any}
           course={heading}
           name={name}
+          isSelf={isSelf}
           {...props}
         />
       )}
@@ -54,9 +57,15 @@ const VesselDataDisplay = (props: VesselDataDisplayProps) => {
                 (speed || 0) * PROJECTINMINUTES * 60
               ),
             ]}
+            color={projectionColor}
           />
           {minutePositions.map((position, i) => (
-            <Circle key={i} center={position} radius={2} />
+            <Circle
+              key={i}
+              center={position}
+              radius={2}
+              color={projectionColor}
+            />
           ))}
         </Fragment>
       )}
