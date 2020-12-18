@@ -5,6 +5,7 @@ import * as lh from './leaflet-hack'
 import VesselDataBundle from './VesselDataBundle'
 import VesselDataDisplay from './VesselDataDisplay'
 import * as pkg from '../../package.json'
+import { ReplaySubject } from 'rxjs'
 
 const safePluginId = pkg.name.replace(/[-@/]/g, '_')
 const APPLICATION_DATA_VERSION = '1.0'
@@ -55,6 +56,7 @@ const AppPanel = (props) => {
   const [aisTargets, setAisTargets] = useState({})
   const [viewport, setViewport] = useState(getInitialViewport)
   const aisTargetsRef = useRef();
+  const selfId = useRef(new ReplaySubject(1));
   aisTargetsRef.current = aisTargets
 
   const mapRef = useRef(null)
@@ -84,6 +86,7 @@ const AppPanel = (props) => {
       }).then(r => r.status === 200 ? r.json() : Promise.resolve({}))
     }
 
+
     const ws = props.adminUI.openWebsocket({ subscribe: 'none' })
     ws.onopen = () => {
       ws.send(JSON.stringify({
@@ -99,9 +102,9 @@ const AppPanel = (props) => {
             const handler = pathValueHandlers[pathValue.path]
             if (handler) {
               let vesselData = aisTargetsRef.current[delta.context]
-              if (!vesselData) {
+              if (!vesselData && pathValue.path === 'navigation.position') {
                 vesselData = {
-                  vesselData: new VesselDataBundle()
+                  vesselData: new VesselDataBundle(delta.context, selfId.current)
                 }
                 vesselData.vesselData.positionTimeout.subscribe({
                   complete: () => {
@@ -123,6 +126,8 @@ const AppPanel = (props) => {
             }
           })
         })
+      } else if (delta.self) {
+        selfId.current.next(delta.self)
       }
     }
 

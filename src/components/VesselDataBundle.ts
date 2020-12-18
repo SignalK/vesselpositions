@@ -16,8 +16,15 @@ export default class VesselDataBundle {
   headingSubject: Subject<number>
   speedSubject: Subject<number>
   nameSubject: Subject<string>
+  context: string
+  isSelfSubject: Observable<boolean>
 
-  constructor() {
+  constructor(context:string, selfIdSubject: Subject<string>) {
+    this.context = context
+    this.isSelfSubject = selfIdSubject.pipe(
+      map(selfId => selfId === this.context)
+    )
+    this.isSelfSubject.subscribe(x => console.log(x))
     this.positionSubject = new ReplaySubject<LatLngExpression>()
     this.positionTimeout = this.positionSubject.pipe(
       timeoutWith(5 * 60 * 1000, EMPTY)
