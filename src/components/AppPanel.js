@@ -4,8 +4,10 @@ import Control from 'react-leaflet-control'
 import * as lh from './leaflet-hack'
 import VesselDataBundle from './VesselDataBundle'
 import VesselDataDisplay from './VesselDataDisplay'
+import MouseVesselTracker from './MouseVesselTracker'
 import * as pkg from '../../package.json'
 import { ReplaySubject } from 'rxjs'
+import { useObservableState } from 'observable-hooks'
 
 const safePluginId = pkg.name.replace(/[-@/]/g, '_')
 const APPLICATION_DATA_VERSION = '1.0'
@@ -80,6 +82,7 @@ const AppPanel = (props) => {
   const [charts, setCharts] = useState({ baselayers: BASELAYERS, overlays: OVERLAYS })
   const aisTargetsRef = useRef();
   const selfId = useRef(new ReplaySubject(1));
+  const mouseVesselTrackerRef = useRef(new MouseVesselTracker());
   aisTargetsRef.current = aisTargets
 
   const mapRef = useRef(null)
@@ -203,61 +206,86 @@ const AppPanel = (props) => {
   }, [])
 
   return (
-    <Map
-      ref={mapRef}
-      style={{ height: '100%' }}
-      center={viewport.center}
-      zoom={viewport.zoom}
-      onbaselayerchange={bl => localStorage.setItem('baselayer', bl.name)}
-      onoverlayadd={e => saveOverlayState(e.name, true)}
-      onoverlayremove={e => saveOverlayState(e.name, false)}
-      onClick={(e) => {
-        const markers = [...applicationData.markers || []]
-        markers.push(e.latlng)
-        const appData = { ...applicationData, markers }
-        props.adminUI.setApplicationUserData(APPLICATION_DATA_VERSION, appData)
-          .then(() => {
-            setApplicationData(appData)
-          })
-      }}
-      onViewportChanged={viewport => {
-        saveViewport(viewport)
-        lastZoom = viewport.zoom
-      }}
-    >
-      <Control position="topleft" >
-        <div class="leaflet-bar">
-          <a class="leaflet-control-zoom-in" role="button" onClick={() => {
-            setSelfAsCenter((center) => setViewport({ zoom: lastZoom, center }))
-          }}>•</a>
-        </div>
-      </Control>
-
-      <LayersControl position="topright">
-        {charts.baselayers.map((layer, i) => (
-          <LayersControl.BaseLayer key={i} checked={layer.checked} name={layer.name}>
-            <TileLayer url={layer.url} attribution={layer.attribution} />
-          </LayersControl.BaseLayer>
-        ))}
-        {charts.overlays.map((layer, i) => (
-          <LayersControl.Overlay key={i} name={layer.name} checked={layer.checked}>
-            <TileLayer url={layer.url} attribution={layer.attribution} />
-          </LayersControl.Overlay>
-        ))}
-
-      </LayersControl>
-
-      {(applicationData.markers || []).map((latlon, i) => (
-        <Marker key={i} position={latlon} onClick={() => {
-          const markers = applicationData.markers.slice()
-          markers.splice(i, 1)
+    <div id='mapcontainer' style={{ height: '100%' }}>
+      <Map
+        ref={mapRef}
+        style={{ height: '100%' }}
+        center={viewport.center}
+        zoom={viewport.zoom}
+        onbaselayerchange={bl => localStorage.setItem('baselayer', bl.name)}
+        onoverlayadd={e => saveOverlayState(e.name, true)}
+        onoverlayremove={e => saveOverlayState(e.name, false)}
+        onmousemove={(e) => mouseVesselTrackerRef.current.nextMousePosition(e)}
+        onClick={(e) => {
+          const markers = [...applicationData.markers || []]
+          markers.push(e.latlng)
           const appData = { ...applicationData, markers }
-          props.adminUI.setApplicationUserData(APPLICATION_DATA_VERSION, appData).then(() => setApplicationData(appData))
-        }} />
-      ))}
-      {Object.entries(aisTargets).map(
-        ([context, data]) => <VesselDataDisplay key={context} vesselData={data.vesselData} />)}
-    </Map>
+          props.adminUI.setApplicationUserData(APPLICATION_DATA_VERSION, appData)
+            .then(() => {
+              setApplicationData(appData)
+            })
+        }}
+        onViewportChanged={viewport => {
+          saveViewport(viewport)
+          lastZoom = viewport.zoom
+        }}
+      >
+        <Control position="topleft" >
+          <div class="leaflet-bar">
+            <a class="leaflet-control-zoom-in" role="button" onClick={() => {
+              setSelfAsCenter((center) => setViewport({ zoom: lastZoom, center }))
+            }}>•</a>
+          </div>
+        </Control>
+
+        <LayersControl position="topright">
+          {charts.baselayers.map((layer, i) => (
+            <LayersControl.BaseLayer key={i} checked={layer.checked} name={layer.name}>
+              <TileLayer url={layer.url} attribution={layer.attribution} />
+            </LayersControl.BaseLayer>
+          ))}
+          {charts.overlays.map((layer, i) => (
+            <LayersControl.Overlay key={i} name={layer.name} checked={layer.checked}>
+              <TileLayer url={layer.url} attribution={layer.attribution} />
+            </LayersControl.Overlay>
+          ))}
+        </LayersControl>
+
+        {(applicationData.markers || []).map((latlon, i) => (
+          <Marker key={i} position={latlon} onClick={() => {
+            const markers = applicationData.markers.slice()
+            markers.splice(i, 1)
+            const appData = { ...applicationData, markers }
+            props.adminUI.setApplicationUserData(APPLICATION_DATA_VERSION, appData).then(() => setApplicationData(appData))
+          }} />
+        ))}
+        {Object.entries(aisTargets).map(
+          ([context, data]) =>
+            <VesselDataDisplay
+              mouseVesselTracker={mouseVesselTrackerRef.current}
+              key={context}
+              vesselData={data.vesselData} />)}
+      </Map>
+      <VesselInfoPanel
+        mouseVesselTracker={mouseVesselTrackerRef.current}
+        aisTargets={aisTargetsRef.current} />
+    </div>
+  )
+}
+
+const VesselInfoPanel = (props) => {
+  const selectedContext = useObservableState(props.mouseVesselTracker.selectedContext);
+  let vesselInfo = ''
+  if (selectedContext) {
+    const name = props.aisTargets[selectedContext].vesselData.nameSubject.getValue()
+    const id = selectedContext.slice(selectedContext.lastIndexOf(':') + 1)
+    vesselInfo = `${name}(${id})`
+  }
+
+  return (
+    <div style={{ position: 'absolute', bottom: '50px', zIndex: 1000, background: 'rgba(0, 0, 0, 0.1)' }}>
+      {vesselInfo}
+    </div>
   )
 }
 

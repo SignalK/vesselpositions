@@ -1,4 +1,4 @@
-import React, { Fragment } from "react";
+import React, { Fragment, useEffect } from "react";
 
 import { Circle, ContextProps, Polyline, withLeaflet } from "react-leaflet";
 import { useObservableState } from "observable-hooks";
@@ -6,14 +6,21 @@ import { SVGMarker } from "./SVGMarker";
 import VesselDataBundle from "./VesselDataBundle";
 import { projectedLocation } from "./geoutil";
 import { LatLngTuple } from "leaflet";
+import MouseVesselTracker from "./MouseVesselTracker";
 
 interface VesselDataDisplayProps extends ContextProps {
   vesselData: VesselDataBundle;
+  mouseVesselTracker: MouseVesselTracker;
 }
 
 const PROJECTINMINUTES = 10;
 
 const VesselDataDisplay = (props: VesselDataDisplayProps) => {
+  useEffect(() => {
+    //check if a vessel moved so that it is either now under
+    //the pointer and or no longer under the pointer
+    props.mouseVesselTracker.updateSelectedContext()
+  })
   const { vesselData } = props;
   const position = useObservableState(vesselData.positionSubject);
   const heading = useObservableState(vesselData.headingSubject);
@@ -40,6 +47,7 @@ const VesselDataDisplay = (props: VesselDataDisplayProps) => {
         <SVGMarker
           position={position as any}
           course={heading}
+          context={vesselData.context}
           name={name}
           isSelf={isSelf}
           {...props}
