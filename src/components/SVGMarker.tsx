@@ -8,10 +8,12 @@ import {
 } from "leaflet";
 import { MapLayer, MapLayerProps } from "react-leaflet";
 import { withLeaflet } from "react-leaflet";
+import { CONTEXTATTRIBUTENAME } from "./MouseVesselTracker";
 
 interface SVGMarkerProps extends MapLayerProps {
   position?: LatLngExpression;
   course?: number;
+  context: string;
   name?: string;
   isSelf?: boolean;
 }
@@ -41,32 +43,47 @@ const divIcon = (props: SVGIconProps) => {
   return new DivIcon({
     className: "custom-icon", //suppress default icon white box
     iconAnchor: [25, 25],
-    html: ReactDOMServer.renderToString(
-      <SVGIcon course={props.course} name={props.name} isSelf={props.isSelf}/>
-    ),
+    html: ReactDOMServer.renderToString(<SVGIcon {...props} />),
   });
 };
 
 interface SVGIconProps {
   course?: number;
   name?: string;
+  context: string;
   isSelf?: boolean;
 }
-const SVGIcon = (props: SVGIconProps) => (
-  <svg width="150px" height="50px" viewBox="-50 -50 325 100">
-    <g transform={`rotate(${deg(props.course || 0)})`}>
-      {props.course !== undefined && (<polygon
-        points="0 -25, 10 15, -10 15"
-        fill={props.isSelf ? 'black' : 'gray'}
-        strokeWidth="2"
-        stroke="black"
-      />)}
-      <circle r="2" stroke="black" />
-    </g>
-    <g>
-      <text x="10" style={{fontSize: 28}}>{props.name ? props.name : ""}</text>
-    </g>
-  </svg>
-);
+
+const VESSELLENGTH = 80;
+//"0 -25, 10 15, -10 15"
+const points = `0 -${(25 / 40) * VESSELLENGTH}, ${VESSELLENGTH / 4} ${
+  (15 / 40) * VESSELLENGTH
+}, -${VESSELLENGTH / 4} ${(15 / 40) * VESSELLENGTH}`;
+
+const SVGIcon = (props: SVGIconProps) => {
+  const dataContextProp: any = {};
+  dataContextProp[CONTEXTATTRIBUTENAME] = props.context;
+  return (
+    <svg width="150px" height="50px" viewBox="-50 -50 325 100" pointerEvents="none">
+      <g {...dataContextProp} transform={`rotate(${deg(props.course || 0)})`}>
+        {props.course !== undefined && (
+          <polygon
+            points={points}
+            fill={props.isSelf ? "black" : "gray"}
+            strokeWidth="2"
+            stroke="black"
+            pointerEvents="all"
+          />
+        )}
+        <circle r="2" stroke="black" />
+      </g>
+      <g>
+        <text x="10" style={{ fontSize: 28 }} pointerEvents="none">
+          {props.name ? props.name : ""}
+        </text>
+      </g>
+    </svg>
+  );
+};
 
 const deg = (r: number) => (r / Math.PI) * 180;
