@@ -22,7 +22,8 @@ const OVERLAYS = [
   {
     name: 'OpenSeaMap',
     url: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
-    attribution: ''
+    attribution: '',
+    checked: JSON.parse(localStorage.getItem('selectedOverlay')) === 'OpenSeaMap'
   }
 ]
 
@@ -119,6 +120,12 @@ const AppPanel = (props) => {
         }
         return acc
       }, [])]
+      const selectedBaselayerName = localStorage.getItem('baselayer')
+      if (selectedBaselayerName) {
+        (baselayers.find(l => l.name === selectedBaselayerName) || baselayers[0]).checked = true
+      } else {
+        baselayers[0].checked = true
+      }
       setCharts({
         ...charts,
         baselayers
@@ -201,6 +208,9 @@ const AppPanel = (props) => {
       style={{ height: '100%' }}
       center={viewport.center}
       zoom={viewport.zoom}
+      onbaselayerchange={bl => localStorage.setItem('baselayer', bl.name)}
+      onoverlayadd={e => saveOverlayState(e.name, true)}
+      onoverlayremove={e => saveOverlayState(e.name, false)}
       onClick={(e) => {
         const markers = [...applicationData.markers || []]
         markers.push(e.latlng)
@@ -225,12 +235,12 @@ const AppPanel = (props) => {
 
       <LayersControl position="topright">
         {charts.baselayers.map((layer, i) => (
-          <LayersControl.BaseLayer key={i} checked={i === 0} name={layer.name}>
+          <LayersControl.BaseLayer key={i} checked={layer.checked} name={layer.name}>
             <TileLayer url={layer.url} attribution={layer.attribution} />
           </LayersControl.BaseLayer>
         ))}
         {charts.overlays.map((layer, i) => (
-          <LayersControl.Overlay key={i} name={layer.name}>
+          <LayersControl.Overlay key={i} name={layer.name} checked={layer.checked}>
             <TileLayer url={layer.url} attribution={layer.attribution} />
           </LayersControl.Overlay>
         ))}
@@ -249,6 +259,14 @@ const AppPanel = (props) => {
         ([context, data]) => <VesselDataDisplay key={context} vesselData={data.vesselData} />)}
     </Map>
   )
+}
+
+function saveOverlayState(overlayName, checked) {
+  if (checked) {
+    localStorage.setItem('selectedOverlay', JSON.stringify(overlayName))
+  } else {
+    localStorage.setItem('selectedOverlay', JSON.stringify(null))
+  }
 }
 
 export default AppPanel
