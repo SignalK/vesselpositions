@@ -121,7 +121,7 @@ const AppPanel = (props) => {
         return acc
       }, [])]
       const selectedBaselayerName = localStorage.getItem('baselayer')
-      if (selectedBaselayerName) {
+      if (selectedBaselayerName) {
         (baselayers.find(l => l.name === selectedBaselayerName) || baselayers[0]).checked = true
       } else {
         baselayers[0].checked = true
@@ -226,11 +226,11 @@ const AppPanel = (props) => {
       }}
     >
       <Control position="topleft" >
-      <div class="leaflet-bar">
-        <a class="leaflet-control-zoom-in" role="button" onClick={() => {
-          setSelfAsCenter((center) => setViewport({zoom: lastZoom, center}))
+        <div class="leaflet-bar">
+          <a class="leaflet-control-zoom-in" role="button" onClick={() => {
+            setSelfAsCenter((center) => setViewport({ zoom: lastZoom, center }))
           }}>•</a>
-      </div>
+        </div>
       </Control>
 
       <LayersControl position="topright">
