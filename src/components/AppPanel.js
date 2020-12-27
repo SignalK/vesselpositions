@@ -198,7 +198,7 @@ const AppPanel = (props) => {
         })
       })
     }
-    const fetchNamesTimer = setInterval(fetchNames, 10000)
+    const fetchNamesTimer = setInterval(fetchNames, 30 * 1000)
     setTimeout(fetchNames, 500)
     return () => {
       clearInterval(fetchNamesTimer)
