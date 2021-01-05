@@ -102,16 +102,6 @@ const AppPanel = (props) => {
       setApplicationData(appData)
     })
 
-    const fetchTrack = (context) => {
-      const contextParts = context.split('.')
-      if (contextParts[0] !== 'vessels') {
-        return Promise.resolve({})
-      }
-      return fetch(`/signalk/v1/api/vessels/${contextParts[1]}/track`, {
-        credentials: 'include'
-      }).then(r => r.status === 200 ? r.json() : Promise.resolve({}))
-    }
-
     fetchCharts().then(foundCharts => {
       const baselayers = [...BASELAYERS, ...Object.values(foundCharts).reduce((acc, chart) => {
         if (chart.tilemapUrl) {
@@ -160,12 +150,6 @@ const AppPanel = (props) => {
                     setAisTargets({ ...aisTargetsRef.current })
                   }
                 })
-                fetchTrack(delta.context)
-                  .then(trackGEOJson => {
-                    if (trackGEOJson && trackGEOJson.coordinates && trackGEOJson.coordinates[0]) {
-                      vesselData.vesselData.setRetrievedTrack(trackGEOJson.coordinates[0].map(([lng, lat]) => [lat, lng]))
-                    }
-                  })
                 const newTarget = {}
                 newTarget[delta.context] = vesselData
                 setAisTargets(prevTargets => ({ ...prevTargets, ...newTarget }))
@@ -231,8 +215,8 @@ const AppPanel = (props) => {
         }}
       >
         <Control position="topleft" >
-          <div class="leaflet-bar">
-            <a class="leaflet-control-zoom-in" role="button" onClick={() => {
+          <div className="leaflet-bar">
+            <a className="leaflet-control-zoom-in" role="button" onClick={() => {
               setSelfAsCenter((center) => setViewport({ zoom: lastZoom, center }))
             }}>•</a>
           </div>

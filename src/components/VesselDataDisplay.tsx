@@ -25,7 +25,7 @@ const VesselDataDisplay = (props: VesselDataDisplayProps) => {
   const position = useObservableState(vesselData.positionSubject);
   const heading = useObservableState(vesselData.headingSubject);
   const speed = useObservableState(vesselData.speedSubject);
-  const track = useObservableState(vesselData.uptodateTrack, []);
+  const track = useObservableState(vesselData.track, []);
   const name = useObservableState(vesselData.nameSubject);
   const isSelf = useObservableState(vesselData.isSelfSubject);
   const projectionMinutes = Array.from(Array(PROJECTINMINUTES), (x, i) => i);
@@ -53,7 +53,7 @@ const VesselDataDisplay = (props: VesselDataDisplayProps) => {
           {...props}
         />
       )}
-      {track.length > 0 && <Polyline positions={track} color="grey" />}
+      {track.length > 0 && <Polyline positions={[...track, position as LatLngTuple  ]} color="grey" />}
       {position && heading && (
         <Fragment>
           <Polyline

@@ -1,6 +1,8 @@
 import { LatLngExpression } from "leaflet"
 import { BehaviorSubject, EMPTY, Observable, ReplaySubject, Subject } from "rxjs"
-import { map, throttleTime, scan, withLatestFrom, timeoutWith } from "rxjs/operators"
+import { map, timeoutWith } from "rxjs/operators"
+import { TrackAccumulator } from '@signalk/tracks'
+import { LatLngTuple } from "@signalk/tracks/dist/types"
 
 interface LatLngObject {
   latitude: number,
@@ -10,14 +12,14 @@ interface LatLngObject {
 export default class VesselDataBundle {
   positionSubject: Subject<LatLngExpression>
   positionTimeout: Observable<any>
-  retrievedTrack: Subject<LatLngExpression[]>
-  accumulatedTrack: Observable<LatLngExpression[]>
-  uptodateTrack: Observable<LatLngExpression[]>
   headingSubject: Subject<number>
   speedSubject: Subject<number>
   nameSubject: BehaviorSubject<string>
   context: string
   isSelfSubject: Observable<boolean>
+  private accumulator: TrackAccumulator
+  track: Observable<LatLngTuple[]>
+
 
   constructor(context:string, selfIdSubject: Subject<string>) {
     this.context = context
@@ -28,22 +30,12 @@ export default class VesselDataBundle {
     this.positionTimeout = this.positionSubject.pipe(
       timeoutWith(5 * 60 * 1000, EMPTY)
     )
-    this.retrievedTrack = new BehaviorSubject([] as LatLngExpression[])
-    this.accumulatedTrack = this.positionSubject.pipe(
-      throttleTime(5 * 1000),
-      scan<any, any>((acc, position) => {
-        acc.push(position)
-        return acc
-      }, [])
-    )
-    this.uptodateTrack = this.positionSubject.pipe(
-      withLatestFrom(this.retrievedTrack, this.accumulatedTrack),
-      map(([latestPosition, retrievedTrack, earlierTrack]) => [
-        ...retrievedTrack,
-        ...earlierTrack,
-        latestPosition,
-      ])
-    );
+    this.accumulator = new TrackAccumulator({
+      resolution: 60*1000,
+      pointsToKeep: 60,
+      fetchTrackFor: context
+    })
+    this.track = this.accumulator.track
     this.headingSubject = new ReplaySubject<number>(1)
     this.speedSubject = new ReplaySubject<number>(1)
     this.nameSubject = new BehaviorSubject('-')
@@ -52,6 +44,7 @@ export default class VesselDataBundle {
   nextPosition(posObject: LatLngObject) {
     const latLng: LatLngExpression = [posObject.latitude, posObject.longitude]
     this.positionSubject.next(latLng)
+    this.accumulator.nextLatLngTuple(latLng)
   }
 
   nextHeading(heading: number) {
@@ -64,9 +57,5 @@ export default class VesselDataBundle {
 
   setName(name: string) {
     this.nameSubject.next(name)
-  }
-
-  setRetrievedTrack(track: LatLngExpression[]) {
-    this.retrievedTrack.next(track)
   }
 }
