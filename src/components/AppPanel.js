@@ -70,6 +70,7 @@ const fetchCharts = () => fetch('/signalk/v1/api/resources/charts', {
   credentials: 'include'
 }).then(r => r.json())
 
+let fetchInProgress = false
 
 const AppPanel = (props) => {
   if (props.loginStatus.status === 'notLoggedIn' && props.loginStatus.authenticationRequired) {
@@ -179,24 +180,32 @@ const AppPanel = (props) => {
       }
     }
 
-    const fetchNames = () => {
-      const vesselsWithNoName = Object.entries(aisTargetsRef.current).filter(([id, data]) => !data.hasName)
-      const fetchNames = vesselsWithNoName.map(([id]) => props.adminUI.get({ context: id, path: 'name' }).then(r => r.json().then(data => [id, data])))
-      Promise.allSettled(fetchNames).then(settleds => {
-        const successes = settleds.filter(({ status }) => status === 'fulfilled')
-        if (successes.length === 0) {
-          return
-        }
-        setAisTargets((prevTargets) => {
-          const result = successes.reduce((acc, { status, value }) => {
-            const [id, name] = value
-            acc[id].hasName = true
-            acc[id].vesselData.setName(`${name[0]}${name.slice(1).toLowerCase()}`)
-            return acc
-          }, { ...prevTargets })
-          return result
+    const fetchEachName = (vesselsWithNoName) => {
+      if (vesselsWithNoName.length > 0) {
+        const vessel = vesselsWithNoName.shift()
+        const start = Date.now()
+        props.adminUI.get({ context: vessel[0], path: 'name' }).then(r => {
+          if (r.status === 200) {
+            r.json().then(name => setAisTargets(prevTargets => {
+              prevTargets[vessel[0]].hasName = true
+              prevTargets[vessel[0]].vesselData.setName(`${name[0]}${name.slice(1).toLowerCase()}`)
+              return { ...prevTargets }
+            }))
+          }
+          setTimeout(() => fetchEachName(vesselsWithNoName), Math.min(Date.now() - start, 500))
         })
-      })
+      } else {
+        fetchInProgress = false
+      }
+    }
+
+    const fetchNames = () => {
+      if (fetchInProgress) {
+        return
+      }
+      const vesselsWithNoName = Object.entries(aisTargetsRef.current).filter(([id, data]) => !data.hasName)
+      fetchInProgress = true
+      fetchEachName(vesselsWithNoName)
     }
     const fetchNamesTimer = setInterval(fetchNames, 30 * 1000)
     setTimeout(fetchNames, 500)
