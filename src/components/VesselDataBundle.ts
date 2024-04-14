@@ -46,7 +46,7 @@ export default class VesselDataBundle {
     );
     this.headingSubject = new ReplaySubject<number>(1)
     this.speedSubject = new ReplaySubject<number>(1)
-    this.nameSubject = new BehaviorSubject('-')
+    this.nameSubject = new BehaviorSubject('')
   }
 
   nextPosition(posObject: LatLngObject) {

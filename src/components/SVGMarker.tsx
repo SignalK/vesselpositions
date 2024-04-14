@@ -56,9 +56,8 @@ interface SVGIconProps {
 
 const VESSELLENGTH = 80;
 //"0 -25, 10 15, -10 15"
-const points = `0 -${(25 / 40) * VESSELLENGTH}, ${VESSELLENGTH / 4} ${
-  (15 / 40) * VESSELLENGTH
-}, -${VESSELLENGTH / 4} ${(15 / 40) * VESSELLENGTH}`;
+const points = `0 -${(25 / 40) * VESSELLENGTH}, ${VESSELLENGTH / 4} ${(15 / 40) * VESSELLENGTH
+  }, -${VESSELLENGTH / 4} ${(15 / 40) * VESSELLENGTH}`;
 
 const SVGIcon = (props: SVGIconProps) => {
   const dataContextProp: any = {};
@@ -75,13 +74,13 @@ const SVGIcon = (props: SVGIconProps) => {
             pointerEvents="all"
           />
         )}
-        <circle r="2" stroke="black" />
+        <circle r={props.course === undefined ? 10 : 2} stroke="black" />
       </g>
-      <g>
+      {(props.name?.length || 0) > 0 && <g>
         <text x="10" style={{ fontSize: 28 }} pointerEvents="none">
-          {props.name ? props.name : ""}
+          {props.name}
         </text>
-      </g>
+      </g>}
     </svg>
   );
 };
