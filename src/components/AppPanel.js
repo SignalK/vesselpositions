@@ -68,7 +68,7 @@ const getInitialViewport = () => {
 
 const fetchCharts = () => fetch('/signalk/v1/api/resources/charts', {
   credentials: 'include'
-}).then(r => r.json())
+}).then(r => r.json()).catch(e => ([]))
 
 
 const AppPanel = (props) => {
