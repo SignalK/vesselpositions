@@ -71,6 +71,11 @@ const fetchCharts = () => fetch('/signalk/v1/api/resources/charts', {
 }).then(r => r.json()).catch(e => ([]))
 
 
+let tracksAvailable = true
+
+const tracksToFetch = []
+let trackFetchInProgress = false
+
 const AppPanel = (props) => {
   if (props.loginStatus.status === 'notLoggedIn' && props.loginStatus.authenticationRequired) {
     return <props.adminUI.Login />
@@ -102,14 +107,42 @@ const AppPanel = (props) => {
       setApplicationData(appData)
     })
 
+
+    const fetchTracks = (isStart = true) => {
+      if (isStart && trackFetchInProgress) {
+        return
+      }
+      if (tracksToFetch.length > 0) {
+        trackFetchInProgress = true
+        const { context, vesselData } = tracksToFetch.shift()
+        const start = Date.now()
+        fetchTrack(context)
+          .then(trackGEOJson => {
+            if (trackGEOJson && trackGEOJson.coordinates && trackGEOJson.coordinates[0]) {
+              vesselData.setRetrievedTrack(trackGEOJson.coordinates[0].map(([lng, lat]) => [lat, lng]))
+            }
+          }).then(() => setTimeout(() => fetchTracks(false), Math.min(500, Date.now() - start)))
+      } else {
+        trackFetchInProgress = false
+      }
+
+    }
     const fetchTrack = (context) => {
+      if (!tracksAvailable) {
+        return Promise.resolve({})
+      }
       const contextParts = context.split('.')
       if (contextParts[0] !== 'vessels') {
         return Promise.resolve({})
       }
       return fetch(`/signalk/v1/api/vessels/${contextParts[1]}/track`, {
         credentials: 'include'
-      }).then(r => r.status === 200 ? r.json() : Promise.resolve({}))
+      }).then(r => {
+        if (r.status !== 200) {
+          tracksAvailable = false
+        }
+        return r.json()
+      })
     }
 
     fetchCharts().then(foundCharts => {
@@ -160,12 +193,8 @@ const AppPanel = (props) => {
                     setAisTargets({ ...aisTargetsRef.current })
                   }
                 })
-                fetchTrack(delta.context)
-                  .then(trackGEOJson => {
-                    if (trackGEOJson && trackGEOJson.coordinates && trackGEOJson.coordinates[0]) {
-                      vesselData.vesselData.setRetrievedTrack(trackGEOJson.coordinates[0].map(([lng, lat]) => [lat, lng]))
-                    }
-                  })
+                tracksToFetch.push({ context: delta.context, vesselData: vesselData.vesselData })
+                fetchTracks()
                 const newTarget = {}
                 newTarget[delta.context] = vesselData
                 setAisTargets(prevTargets => ({ ...prevTargets, ...newTarget }))
