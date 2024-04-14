@@ -170,7 +170,9 @@ const AppPanel = (props) => {
                 newTarget[delta.context] = vesselData
                 setAisTargets(prevTargets => ({ ...prevTargets, ...newTarget }))
               }
-              handler(vesselData.vesselData, pathValue.value)
+              if (vesselData) {
+                handler(vesselData.vesselData, pathValue.value)
+              }
             }
           })
         })
